@@ -1,3 +1,5 @@
+[![CI](https://github.com/tifenn-guillas/social-stats/actions/workflows/main.yml/badge.svg)](https://github.com/tifenn-guillas/social-stats/actions/workflows/main.yml)
+
 # SocialStats
 
 This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 12.2.15.
