@@ -38,10 +38,10 @@ install:
 	-w /project node:16-slim yarn install
 
 build:
-	@docker-compose exec --user $(UID):$(GID) client ng build
+	@docker-compose exec client ng build
 
 shell:
-	@docker-compose exec --user $(UID):$(GID) client bash
+	@docker-compose exec client bash
 
 test:
-	@docker-compose exec --user $(UID):$(GID) client ng test
+	@docker-compose exec client ng test
