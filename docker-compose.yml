@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+    client:
+        build:
+            context: .
+        ports:
+            - 4200:4200
+        working_dir: /project
+        volumes:
+            - .:/project
+        command: ng serve --host=0.0.0.0 --disable-host-check --port 4200
