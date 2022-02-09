@@ -41,7 +41,7 @@ build:
 	@docker-compose exec client ng build
 
 shell:
-	@docker-compose exec client bash
+	@docker-compose exec --user $(UID):$(GID) client bash
 
 test:
 	@docker-compose exec client ng test

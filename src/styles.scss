@@ -3,5 +3,5 @@
 @tailwind utilities;
 
 html {
-    font-family: "Roboto";
+    @apply font-roboto text-slate-50;
 }
