@@ -19,21 +19,39 @@ export class AppComponent implements OnInit {
 
     constructor(private sseService: SseService) { }
 
+    /**
+     * Starts SSE stream on component initiation and stops it on dirty destroyed page.
+     *
+     * @param  {any} message - The post to process.
+     */
     ngOnInit(): void {
         this.startSseStream();
         window.onbeforeunload = () => this.stopSseStream();
     }
 
+    /**
+     * Starts SSE stream.
+     */
     startSseStream(): void {
         this.sseSubscription = this.sseService
             .getServerSentEvent()
             .subscribe(message => this.checkActivity(JSON.parse(message.data)));
     }
 
+    /**
+     * Stops SSE stream.
+     */
     stopSseStream(): void {
         this.sseSubscription?.unsubscribe();
     }
 
+    /**
+     * Gets data chart for the given network.
+     *
+     * @param  {string} network - The network.
+     *
+     * @return ChartData | null
+     */
     getData(network: string): ChartData | null {
         return null;
     }
@@ -95,6 +113,5 @@ export class AppComponent implements OnInit {
      */
     isActivitiesExist(activity: Activity, network: string, day: number, hour: number): boolean {
         return activity.network == network && activity.day == day && activity.hour == hour;
-
     }
 }

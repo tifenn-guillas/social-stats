@@ -30,11 +30,21 @@ describe('AppComponent', () => {
         expect(component).toBeTruthy();
     });
 
+    it('should call #startSseStream() on component initialization', () => {
+        spyOn(component, 'startSseStream');
+        component.ngOnInit();
+        expect(component.startSseStream).toHaveBeenCalledTimes(1);
+    });
+
     it('#startSseStream() should start SSE stream', () => {
-        sseServiceMock.getServerSentEvent.and.returnValue(of());
+        sseServiceMock.getServerSentEvent.and.returnValue(of({
+            "data": JSON.stringify({ "data": "This is my data" })
+        }));
+        spyOn(component, 'checkActivity');
         expect(component.sseSubscription).toBeUndefined();
         component.startSseStream();
         expect(component.sseSubscription).toBeTruthy();
+        expect(component.checkActivity).toHaveBeenCalledTimes(1);
     });
 
     it('#stopSseStream() should stop SSE stream', () => {
