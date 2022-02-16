@@ -90,20 +90,19 @@ export class AppComponent implements OnInit {
      * @param  {number} hour - The hour of post.
      */
     addActivity(network: string, day: number, hour: number): void {
-        if (this.buffer.find(activity => this.isActivitiesExist(activity, network, day, hour))) {
+        if (this.buffer.find(activity => this.isActivitiesMatch(activity, network, day, hour))) {
             // Exclamation point because object is always defined in this case.
-            const activity = this.buffer.find(activity => this.isActivitiesExist(activity, network, day, hour))!;
-            const index = this.buffer.findIndex(activity => this.isActivitiesExist(activity, network, day, hour));
+            const activity = this.buffer.find(activity => this.isActivitiesMatch(activity, network, day, hour))!;
+            const index = this.buffer.findIndex(activity => this.isActivitiesMatch(activity, network, day, hour));
             const newValue: Activity = { network, day, hour, count: activity.count + 1 };
             this.buffer.splice(index, 1, newValue);
         } else {
             this.buffer = [...this.buffer, { network, day, hour, count: 1 }];
         }
-        console.log(this.buffer);
     }
 
     /**
-     * Checks if activity already exist for the given period.
+     * Checks if activity match for the given period.
      *
      * @param  {Activity} activity - The activity.
      * @param  {string} network - The social network.
@@ -111,7 +110,7 @@ export class AppComponent implements OnInit {
      * @param  {number} hour - The hour of post.
      * @return boolean
      */
-    isActivitiesExist(activity: Activity, network: string, day: number, hour: number): boolean {
+    isActivitiesMatch(activity: Activity, network: string, day: number, hour: number): boolean {
         return activity.network == network && activity.day == day && activity.hour == hour;
     }
 }
