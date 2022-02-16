@@ -52,7 +52,7 @@ describe('AppComponent', () => {
         component.sseSubscription = of().subscribe();
         expect(component.sseSubscription).toBeTruthy();
         component.stopSseStream();
-        expect(component.sseSubscription.closed).toBeTrue();
+        expect(component.sseSubscription).toBeUndefined();
     });
 
     it('#getData(network) should return null if no data for the given network', () => {
