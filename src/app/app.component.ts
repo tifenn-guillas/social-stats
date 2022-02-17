@@ -3,7 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { interval, Subscription } from 'rxjs';
 
 import { SseService } from './services/sse.service';
-import { Activity, ChartData, Series } from './models';
+import { Activity, ChartData, DaysTable, HoursTable, NetworksTable, Series } from './models';
 
 @Component({
     selector: 'app-root',
@@ -12,9 +12,7 @@ import { Activity, ChartData, Series } from './models';
 })
 export class AppComponent implements OnInit {
     sseSubscription: Subscription | undefined;
-    readonly socialNetworks = ['pin', 'instagram_media', 'youtube_video', 'article', 'tweet', 'facebook_status'];
-    readonly weekday = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    readonly hours = ['12PM', '1AM', '2AM', '3AM', '4AM', '5AM', '6AM', '7AM', '8AM', '9AM', '10AM', '11AM', '12AM', '1PM', '2PM', '3PM', '4PM', '5PM', '6PM', '7PM', '8PM', '9PM', '10PM', '11PM'];
+    networks: string[] = Object.keys(NetworksTable);
     data: { network: string, data: ChartData[] }[] = [];
     buffer: Activity[] = [];
 
@@ -22,8 +20,6 @@ export class AppComponent implements OnInit {
 
     /**
      * Starts SSE stream on component initiation and stops it on dirty destroyed page.
-     *
-     * @param  {any} message - The post to process.
      */
     ngOnInit(): void {
         this.initChartsData();
@@ -31,7 +27,7 @@ export class AppComponent implements OnInit {
         window.onbeforeunload = () => this.stopSseStream();
         interval(5000).subscribe(_ => {
             if (this.sseSubscription) {
-                // this.updateChartData();
+                this.updateChartData();
             }
         });
     }
@@ -41,14 +37,14 @@ export class AppComponent implements OnInit {
      */
     initChartsData(): void {
         let series: Series[] = [];
-        this.weekday.forEach(day => {
+        DaysTable.forEach(day => {
             series.push({ name: day, value: 0 });
         });
         let chartData: ChartData[] = [];
-        this.hours.forEach(hour => {
+        HoursTable.forEach(hour => {
             chartData.push({ name: hour, series });
         });
-        this.socialNetworks.forEach(network => {
+        Object.keys(NetworksTable).forEach(network => {
             this.data.push({ network, data: chartData })
         });
     }
@@ -71,17 +67,25 @@ export class AppComponent implements OnInit {
     }
 
     /**
+     * Returns network label.
+     *
+     * @param  {string} network - The network.
+     *
+     * @return string
+     */
+    getNetworkLabel(network: string): string {
+        return NetworksTable[network];
+    };
+
+    /**
      * Gets data chart for the given network.
      *
      * @param  {string} network - The network.
      *
-     * @return ChartData | null
+     * @return ChartData
      */
-    getData(network: string): ChartData[] | null {
-        if (this.data.find(d => d.network === network)) {
-            return this.data.find(d => d.network === network)!.data;
-        }
-        return null;
+    getData(network: string): ChartData[] {
+        return this.data.find(d => d.network === network)!.data;
     }
 
     /**
@@ -90,8 +94,8 @@ export class AppComponent implements OnInit {
      * @param  {any} message - The post to process.
      */
     checkActivity(message: any) : void {
-        let day: number;
-        let hour: number;
+        let day: string;
+        let hour: string;
         const network: string | undefined = Object.keys(message)[0];
         if (network) {
             [day, hour] = this.extractDayAndHour(message[network].timestamp);
@@ -103,21 +107,21 @@ export class AppComponent implements OnInit {
      * Extracts day and hour of post from timestamp.
      *
      * @param  {number} timestamp - The timestamp.
-     * @return [number, number]
+     * @return [string, string]
      */
-    extractDayAndHour(timestamp: number): [number, number] {
+    extractDayAndHour(timestamp: number): [string, string] {
         const date: Date = new Date(timestamp);
-        return [date.getDay(), date.getHours()];
+        return [DaysTable[date.getDay()], HoursTable[date.getHours()]];
     }
 
     /**
      * Increments activity count.
      *
      * @param  {string} network - The social network.
-     * @param  {number} day - The day of post.
-     * @param  {number} hour - The hour of post.
+     * @param  {string} day - The day of post.
+     * @param  {string} hour - The hour of post.
      */
-    addActivity(network: string, day: number, hour: number): void {
+    addActivity(network: string, day: string, hour: string): void {
         if (this.buffer.find(activity => this.isActivitiesMatch(activity, network, day, hour))) {
             // Exclamation point because object is always defined in this case.
             const activity = this.buffer.find(activity => this.isActivitiesMatch(activity, network, day, hour))!;
@@ -127,6 +131,7 @@ export class AppComponent implements OnInit {
         } else {
             this.buffer = [...this.buffer, { network, day, hour, count: 1 }];
         }
+        console.log(this.buffer);
     }
 
     /**
@@ -134,11 +139,11 @@ export class AppComponent implements OnInit {
      *
      * @param  {Activity} activity - The activity.
      * @param  {string} network - The social network.
-     * @param  {number} day - The day of post.
-     * @param  {number} hour - The hour of post.
+     * @param  {string} day - The day of post.
+     * @param  {string} hour - The hour of post.
      * @return boolean
      */
-    isActivitiesMatch(activity: Activity, network: string, day: number, hour: number): boolean {
+    isActivitiesMatch(activity: Activity, network: string, day: string, hour: string): boolean {
         return activity.network == network && activity.day == day && activity.hour == hour;
     }
 
@@ -146,6 +151,24 @@ export class AppComponent implements OnInit {
      * Updates data for chart.
      */
     updateChartData(): void {
-
+        this.buffer.forEach(activity => {
+            const dataByNetwork = this.data.find(d => d.network === activity.network)!.data;
+            const dataByHour = dataByNetwork.find(d => d.name === activity.hour)!.series;
+            const dataByDay = dataByHour.find(d => d.name === activity.day)!.value;
+            this.data.forEach(n => {
+                if(n.network === activity.network) {
+                    n.data.forEach(h => {
+                        if(h.name === activity.hour) {
+                            h.series.forEach(d => {
+                                if(d.name === activity.day) {
+                                    d.value = dataByDay + activity.count;
+                                }
+                            })
+                        }
+                    })
+                }
+            });
+        })
+        console.log(this.data[0]);
     }
 }

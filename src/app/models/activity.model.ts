@@ -5,7 +5,7 @@
  */
 export interface Activity {
     network: string,
-    day: number,
-    hour: number,
+    day: string,
+    hour: string,
     count: number
 }
