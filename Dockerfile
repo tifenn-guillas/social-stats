@@ -7,9 +7,9 @@ RUN yarn global add @angular/cli
 RUN ng config -g cli.packageManager yarn
 RUN ng config -g cli.warnings.versionMismatch false
 
-# Chromium
+# Chromium & jq
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends chromium
+    && apt-get install -y --no-install-recommends chromium jq
 ENV CHROME_BIN=chromium
 
 COPY . /project

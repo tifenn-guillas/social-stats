@@ -31,7 +31,9 @@ jobs:
 
             -   name: Run tests and generate coverage report
                 run: |
-                    docker run ${{ env.DOCKER_IMAGE }} bash -c 'yarn && ng test --no-watch --code-coverage'
+                    docker run \
+                    -v ${{ github.workspace }}/coverage:/output-coverage \
+                    ${{ env.DOCKER_IMAGE }} bash -c 'yarn && ng test --no-watch --code-coverage && jq .total.lines.covered ./coverage/social-stats/coverage-summary.json'
 
             -   name: Create coverage badge
                 uses: schneegans/dynamic-badges-action@v1.1.0
