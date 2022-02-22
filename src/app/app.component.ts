@@ -3,7 +3,9 @@ import { Component, OnInit } from '@angular/core';
 import { interval, Subscription } from 'rxjs';
 
 import { SseService } from './services/sse.service';
-import { Activity, ChartData, DaysTable, HoursTable, NetworksTable, Series } from './models';
+import { Activity,  ChartData, ChartDataByNetwork, Counter, Series } from './models';
+import { NetworksTable, DaysTable, HoursTable } from './utils';
+
 
 @Component({
     selector: 'app-root',
@@ -12,9 +14,11 @@ import { Activity, ChartData, DaysTable, HoursTable, NetworksTable, Series } fro
 })
 export class AppComponent implements OnInit {
     sseSubscription: Subscription | undefined;
+    intervalSubscription: Subscription | undefined;
     networks: string[] = Object.keys(NetworksTable);
-    data: { network: string, data: ChartData[] }[] = [];
-    buffer: Activity[] = [];
+    activities: Activity[] = [];
+    chartData: ChartDataByNetwork[] = [];
+    counter: Counter[] = [];
 
     constructor(private sseService: SseService) { }
 
@@ -22,40 +26,25 @@ export class AppComponent implements OnInit {
      * Starts SSE stream on component initiation and stops it on dirty destroyed page.
      */
     ngOnInit(): void {
-        this.initChartsData();
         this.startSseStream();
         window.onbeforeunload = () => this.stopSseStream();
-        interval(5000).subscribe(_ => {
-            if (this.sseSubscription) {
-                this.updateChartData();
-            }
-        });
     }
 
     /**
-     * Inits charts data.
-     */
-    initChartsData(): void {
-        let series: Series[] = [];
-        DaysTable.forEach(day => {
-            series.push({ name: day, value: 0 });
-        });
-        let chartData: ChartData[] = [];
-        HoursTable.forEach(hour => {
-            chartData.push({ name: hour, series });
-        });
-        Object.keys(NetworksTable).forEach(network => {
-            this.data.push({ network, data: chartData })
-        });
-    }
-
-    /**
-     * Starts SSE stream.
+     * Starts SSE stream and update chart data regularly.
      */
     startSseStream(): void {
         this.sseSubscription = this.sseService
             .getServerSentEvent()
             .subscribe(message => this.checkActivity(JSON.parse(message.data)));
+        this.intervalSubscription = interval(5000)
+            .subscribe(_ => {
+                if (this.sseSubscription) {
+                    this.updateChartData();
+                    this.updateCounter();
+                }
+            }
+        );
     }
 
     /**
@@ -64,6 +53,8 @@ export class AppComponent implements OnInit {
     stopSseStream(): void {
         this.sseSubscription?.unsubscribe();
         this.sseSubscription = undefined;
+        this.intervalSubscription?.unsubscribe();
+        this.intervalSubscription = undefined;
     }
 
     /**
@@ -85,7 +76,10 @@ export class AppComponent implements OnInit {
      * @return ChartData
      */
     getData(network: string): ChartData[] {
-        return this.data.find(d => d.network === network)!.data;
+        if (this.chartData.find(d => d.network === network)) {
+            return this.chartData.find(d => d.network === network)!.data;
+        }
+        return [];
     }
 
     /**
@@ -107,6 +101,7 @@ export class AppComponent implements OnInit {
      * Extracts day and hour of post from timestamp.
      *
      * @param  {number} timestamp - The timestamp.
+     *
      * @return [string, string]
      */
     extractDayAndHour(timestamp: number): [string, string] {
@@ -122,16 +117,15 @@ export class AppComponent implements OnInit {
      * @param  {string} hour - The hour of post.
      */
     addActivity(network: string, day: string, hour: string): void {
-        if (this.buffer.find(activity => this.isActivitiesMatch(activity, network, day, hour))) {
+        if (this.activities.find(activity => this.isActivitiesMatch(activity, network, day, hour))) {
             // Exclamation point because object is always defined in this case.
-            const activity = this.buffer.find(activity => this.isActivitiesMatch(activity, network, day, hour))!;
-            const index = this.buffer.findIndex(activity => this.isActivitiesMatch(activity, network, day, hour));
+            const activity = this.activities.find(activity => this.isActivitiesMatch(activity, network, day, hour))!;
+            const index = this.activities.findIndex(activity => this.isActivitiesMatch(activity, network, day, hour));
             const newValue: Activity = { network, day, hour, count: activity.count + 1 };
-            this.buffer.splice(index, 1, newValue);
+            this.activities.splice(index, 1, newValue);
         } else {
-            this.buffer = [...this.buffer, { network, day, hour, count: 1 }];
+            this.activities = [...this.activities, { network, day, hour, count: 1 }];
         }
-        console.log(this.buffer);
     }
 
     /**
@@ -141,6 +135,7 @@ export class AppComponent implements OnInit {
      * @param  {string} network - The social network.
      * @param  {string} day - The day of post.
      * @param  {string} hour - The hour of post.
+     *
      * @return boolean
      */
     isActivitiesMatch(activity: Activity, network: string, day: string, hour: string): boolean {
@@ -151,24 +146,56 @@ export class AppComponent implements OnInit {
      * Updates data for chart.
      */
     updateChartData(): void {
-        this.buffer.forEach(activity => {
-            const dataByNetwork = this.data.find(d => d.network === activity.network)!.data;
-            const dataByHour = dataByNetwork.find(d => d.name === activity.hour)!.series;
-            const dataByDay = dataByHour.find(d => d.name === activity.day)!.value;
-            this.data.forEach(n => {
-                if(n.network === activity.network) {
-                    n.data.forEach(h => {
-                        if(h.name === activity.hour) {
-                            h.series.forEach(d => {
-                                if(d.name === activity.day) {
-                                    d.value = dataByDay + activity.count;
-                                }
-                            })
+        let data: { network: string, data: ChartData[] }[] = [];
+        this.networks.forEach(network => {
+            const dataByNetwork: Activity[] = this.activities.filter(activity => activity.network === network);
+            if (dataByNetwork.length) {
+                let dataChartByNetwork: ChartData[] = [];
+                HoursTable.forEach(hour => {
+                    const dataByHour = dataByNetwork.filter(activity => activity.hour === hour);
+                    let series: Series[] = [];
+                    DaysTable.forEach(day => {
+                        let count = 0;
+                        if (dataByHour.find(activity => activity.day === day)) {
+                            count = dataByHour.find(activity => activity.day === day)!.count;
                         }
-                    })
-                }
+                        series.push({name: day, value: count});
+                    });
+                    dataChartByNetwork.push({name: hour, series})
+                });
+                data.push({network, data: dataChartByNetwork});
+            }
+        });
+        this.chartData = data;
+    }
+
+    /**
+     * Returns total amount of activity for the given network.
+     *
+     * @param  {string} network - The social network.
+     *
+     * @return number
+     */
+    getCount(network: string): number {
+        if (this.counter.find(c => c.network === network)) {
+            return this.counter.find(c => c.network === network)!.count;
+        }
+        return 0;
+    }
+
+    /**
+     * Updates activity counter.
+     */
+    updateCounter(): void {
+        let newCounter: { network: string, count: number }[] = [];
+        this.networks.forEach(network => {
+            const dataByNetwork: Activity[] = this.activities.filter(activity => activity.network === network);
+            let count: number = 0;
+            dataByNetwork.forEach(activity => {
+                count += activity.count;
             });
-        })
-        console.log(this.data[0]);
+            newCounter.push({ network, count });
+        });
+        this.counter = newCounter;
     }
 }

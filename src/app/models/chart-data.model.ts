@@ -1,4 +1,14 @@
 /**
+ * Interface for chart data by network.
+ *
+ * @interface ChartData
+ */
+export interface ChartDataByNetwork {
+    network: string,
+    data: ChartData[]
+}
+
+/**
  * Interface for chart data.
  *
  * @interface ChartData

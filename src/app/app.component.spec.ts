@@ -37,42 +37,44 @@ describe('AppComponent', () => {
         expect(component.startSseStream).toHaveBeenCalledTimes(1);
     });
 
-    it('#initChartsData() should initiate data chart foreach network', () => {
-        expect(component.data.length).toEqual(0);
-        component.initChartsData();
-        expect(component.data.length).toEqual(6);
-        const byHour = component.data.find(d => d.network === 'pin')!.data;
-        expect(byHour.length).toEqual(24);
-        const byDay = byHour.find(h => h.name === '12PM')!.series;
-        expect(byDay.length).toEqual(7);
-    });
-
     it('#startSseStream() should start SSE stream', () => {
         sseServiceMock.getServerSentEvent.and.returnValue(of({
             "data": JSON.stringify({ "data": "This is my data" })
         }));
         spyOn(component, 'checkActivity');
+
         expect(component.sseSubscription).toBeUndefined();
+        expect(component.intervalSubscription).toBeUndefined();
         component.startSseStream();
         expect(component.sseSubscription).toBeTruthy();
+        expect(component.intervalSubscription).toBeTruthy();
         expect(component.checkActivity).toHaveBeenCalledTimes(1);
     });
 
     it('#stopSseStream() should stop SSE stream', () => {
         component.sseSubscription = of().subscribe();
+        component.intervalSubscription = of().subscribe();
         expect(component.sseSubscription).toBeTruthy();
+        expect(component.intervalSubscription).toBeTruthy();
         component.stopSseStream();
         expect(component.sseSubscription).toBeUndefined();
+        expect(component.intervalSubscription).toBeUndefined();
     });
 
-    it('#getData(network) should return null if no data for the given network', () => {
-        // expect(component.getData('pin')).toBeNull();
+    it('#getNetworkLabel() should return label for the given network', () => {
+        expect(component.getNetworkLabel('pin')).toEqual('Pinterest');
     });
 
     it('#getData(network) should return data for the given network', () => {
-        component.initChartsData();
-        const expected = component.data.find(d => d.network === 'pin')!.data;
-        expect(component.getData('pin')).toEqual(expected);
+        component.activities = [{ network: 'pin', day: 'Monday', hour: '2AM', count: 1 }];
+        component.updateChartData();
+        expect(component.getData('toto')).toEqual([]);
+        expect(component.getData('pin').length).toEqual(24);
+        const dataByHour = component.getData('pin').find(d => d.name === '2AM');
+        expect(dataByHour).toBeTruthy();
+        const dataByDay = dataByHour!.series.find(d => d.name === 'Monday');
+        expect(dataByDay).toBeTruthy();
+        expect(dataByDay!.value).toEqual(1);
     });
 
     it('#checkActivity(message) should check message validity', () => {
@@ -87,16 +89,32 @@ describe('AppComponent', () => {
         expect(component.extractDayAndHour(1550415600000)).toEqual(['Sunday', '3PM']);
     });
 
-    it('#addActivity() should increment activity to the buffer', () => {
+    it('#addActivity() should increment activities', () => {
         component.addActivity('myNetwork', 'Monday', '2AM');
-        expect(component.buffer).toEqual([{ network: 'myNetwork', day: 'Monday', hour: '2AM', count: 1 }]);
+        expect(component.activities).toEqual([{ network: 'myNetwork', day: 'Monday', hour: '2AM', count: 1 }]);
         component.addActivity('myNetwork', 'Monday', '2AM');
-        expect(component.buffer).toEqual([{ network: 'myNetwork', day: 'Monday', hour: '2AM', count: 2 }]);
+        expect(component.activities).toEqual([{ network: 'myNetwork', day: 'Monday', hour: '2AM', count: 2 }]);
     });
 
     it('#isActivitiesMatch() should if activities match or not', () => {
         const activity: Activity = { network: 'myNetwork', day: 'Monday', hour: '2AM', count: 1 };
         expect(component.isActivitiesMatch(activity, 'myNetwork', 'Monday', '2AM')).toBeTrue();
         expect(component.isActivitiesMatch(activity, 'myNetwork', 'Monday', '3AM')).toBeFalse();
+    });
+
+    it('#getCount() should return activity count for the given network', () => {
+        component.counter = [{ network: 'myNetwork', count: 3 }];
+        expect(component.getCount('toto')).toEqual(0);
+        expect(component.getCount('myNetwork')).toEqual(3);
+    });
+
+    it('#updateCounter() should update activity counter', () => {
+        component.activities = [
+            { network: 'pin', day: 'Monday', hour: '2AM', count: 1 },
+            { network: 'pin', day: 'Monday', hour: '1AM', count: 2 }
+        ];
+        expect(component.counter).toEqual([]);
+        component.updateCounter();
+        expect(component.counter).toContain({ network: 'pin', count: 3 });
     });
 });
