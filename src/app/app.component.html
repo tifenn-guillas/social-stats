@@ -1,3 +1,24 @@
 <div class="flex justify-center">
-    <h1 class="text-3xl text-slate-50">Social Stat</h1>
+    <h1 class="text-3xl">Social Stat</h1>
 </div>
+
+<mat-tab-group mat-align-tabs="center">
+    <mat-tab *ngFor="let network of networks">
+        <ng-template mat-tab-label>
+            <span [matBadge]="getCount(network)" [matBadgeHidden]="getCount(network) === 0" matBadgeOverlap="false">
+                {{ getNetworkLabel(network) }}
+            </span>
+        </ng-template>
+        <div class="container mx-auto">
+            <div *ngIf="getData(network).length > 0; else noData" class="grid place-content-center py-12">
+                <app-chart [data]="getData(network)"></app-chart>
+                <h3 class="text-center pt-8">Activity by day and hour</h3>
+            </div>
+            <ng-template #noData>
+                <div class="text-center pt-12">
+                    No data, please wait...
+                </div>
+            </ng-template>
+        </div>
+    </mat-tab>
+</mat-tab-group>
