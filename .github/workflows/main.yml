@@ -33,7 +33,8 @@ jobs:
                 run: |
                     docker run \
                     -v ${{ github.workspace }}/coverage:/output-coverage \
-                    ${{ env.DOCKER_IMAGE }} bash -c 'yarn && ng test --no-watch --code-coverage && jq .total.lines.covered ./coverage/social-stats/coverage-summary.json'
+                    ${{ env.DOCKER_IMAGE }} bash -c 'yarn && ng test --no-watch --code-coverage && jq .total.lines.pct ./coverage/social-stats/coverage-summary.json >> /output-coverage/results.txt'
+                    echo "COVERAGE=$(cat ./coverage/results.txt)" >> $GITHUB_ENV
 
             -   name: Create coverage badge
                 uses: schneegans/dynamic-badges-action@v1.1.0
@@ -42,7 +43,7 @@ jobs:
                     gistID: d2e023e4050ea2ad7c5b1506998de8b6
                     filename: social-stats.json
                     label: Coverage
-                    message: 100%
+                    message: ${{ env.COVERAGE }}
                     color: green
 
     building:
