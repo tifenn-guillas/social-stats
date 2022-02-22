@@ -1,4 +1,5 @@
 [![CI](https://github.com/tifenn-guillas/social-stats/actions/workflows/main.yml/badge.svg)](https://github.com/tifenn-guillas/social-stats/actions/workflows/main.yml)
+![Coverage Badge](https://img.shields.io/endpoint?url=https://gist.github.com/tifenn-guillas/d2e023e4050ea2ad7c5b1506998de8b6/raw/social-stats.json)
 
 # SocialStats
 
