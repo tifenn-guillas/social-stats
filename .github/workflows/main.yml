@@ -29,9 +29,15 @@ jobs:
                   file: Dockerfile
                   load: true
 
-            - name: Run tests
+            - name: Run tests and generate coverage report
               run: |
-                  docker run ${{ env.DOCKER_IMAGE }} bash -c 'yarn && ng test --no-watch'
+                  docker run ${{ env.DOCKER_IMAGE }} bash -c 'yarn && ng test --no-watch --code-coverage'
+
+            - name: Generate code coverage badge
+              uses:  demyanets/angular-coverage-badges-action@v1
+              with:
+                    coverage-summary-path: coverage/social-stats/coverage-summary.json
+                    protected-branches: '["master",  "develop"]'
 
     building:
         runs-on: ubuntu-latest
